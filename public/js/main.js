@@ -281,7 +281,7 @@
   // image:initial sends the relative path to the latest image known to the server
   // image:live sends live update
   if (document.getElementById('live')) {
-    var socket = io.connect('http://url.to.api/'),
+    var socket = io.connect('http://cam.michelem.org/'),
         el = document.getElementById('live');
 
     socket.on('image:initial', function (data) {
@@ -290,7 +290,7 @@
 
     socket.on('image:live', function (data) {
       el.src = '';
-      el.src = './live.jpg';
+      el.src = './live.jpg?t='+new Date().getTime();
     });
 
     socket.on('connections:count', function (data) {

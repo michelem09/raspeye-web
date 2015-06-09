@@ -14,10 +14,10 @@ var express = require('express'),
 settings = {
     checkForPanic: true,
     httpAuth: {
-      username: 'demo',
-      password: 'demo'
+      username: 'upload',
+      password: 'upload'
     },
-    moveNightImages: true,
+    moveNightImages: false,
     timeBetweenSaves: 180000,
     timeBeforePanic: 1200000,
     timeBetweenChecks: 300000
@@ -30,7 +30,7 @@ app.use(express.json());
 
 app.use(express.static('./public'));
 
-server.listen(1337);
+server.listen(1337, '127.0.0.1');
 
 // Methods
 function checkStatus () {
@@ -71,7 +71,7 @@ app.get('/timeline/', function (req, res) {
             };
 
             fs.readdir('./images/', function (err, files) {
-                if (err) return res.send(500);
+                if (err) { console.log(err); return res.send(500); }
 
                 files.reverse();
 
@@ -166,6 +166,8 @@ app.get('/thumbnails/*.jpg', function (req, res) {
 
 // Receive post uploads
 app.post('/upload/', express.basicAuth(settings.httpAuth.username, settings.httpAuth.password), function (req, res) {
+console.log('Upload requested');
+
     var now = new Date().getTime(),
         liveStream = fs.createWriteStream(__dirname + '/live/' + now + '.jpg');
 
@@ -178,9 +180,7 @@ app.post('/upload/', express.basicAuth(settings.httpAuth.username, settings.http
         if (now - lastSave >= settings.timeBetweenSaves) {
             gm(__dirname + '/live/' + now + '.jpg').color(function (err, color) {
                 if (!err) {
-                    var targetFolder = (Settings.moveNightImages && color < 10000 && color > 0) ? '/night' : '';
-                }
-
+                var targetFolder = (settings.moveNightImages && color < 10000 && color > 0) ? '/night' : '';
                 fs.renameSync(__dirname + '/live/' + now + '.jpg', __dirname + targetFolder + '/images/' + now + '.jpg');
 
                 fs.readdir(__dirname + '/live/', function (err, files) {
@@ -204,8 +204,10 @@ app.post('/upload/', express.basicAuth(settings.httpAuth.username, settings.http
                     setTimeout(checkStatus, 60000);
                     checkStatusOnUpload = false;
                 }
+                }
             });
         }
+	res.status(200).end();
     });
 });
 
@@ -264,7 +266,8 @@ io.sockets.on('connection', function (socket) {
     io.sockets.emit('connections:count', {count: connectionCount});
 
     fs.readdir('./images/', function (err, files) {
-        socket.emit('image:initial', {url: '/images/' + files[files.length - 1]});
+	if (files)
+	        socket.emit('image:initial', {url: '/images/' + files[files.length - 1]});
     });
 
     socket.on('disconnect', function () {
